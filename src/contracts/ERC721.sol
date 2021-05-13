@@ -5,16 +5,21 @@ import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
+import "./ERC20.sol";
 
 contract CryptoCoffee is ERC721Enumerable, ERC721URIStorage, Ownable {
-    IERC20 private _token; // IERC20 token instance which will be used for payments.
+    Cybercafe private _token; // IERC20 token instance which will be used for payments.
 
     using Counters for Counters.Counter;
     Counters.Counter private _tokenIds;
 
-    constructor(IERC20 token) ERC721("CryptoCoffee", "CRPTCF") {
+    constructor() ERC721("CryptoCoffee", "CRPTCF") {
         // This contract takes in ERC20 contract address for deployment.
-        _token = token;
+        _token = new Cybercafe(address(this));
+    }
+
+    function getERC20TokenAddress() public view returns (address) {
+        return address(_token);
     }
 
     receive() external payable {}
