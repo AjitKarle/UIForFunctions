@@ -7,7 +7,22 @@ import CryptoCoffee from '../abis/CryptoCoffee.json';
 class App extends Component {
   constructor(props) {
     super(props);
-    this.state = { account: '', erc20Contract: null, erc721Contract: null, totalSupplyERC721: 0, totalSupplyERC20: 0, val: '', loading: false};
+    this.state = {
+      loading: false,
+      name: '',
+      symbol: '',
+      owner: '',
+      account: '',
+      erc20Contract: null,
+      erc721Contract: null,
+      totalSupplyERC721: '',
+      totalSupplyERC20: '',
+      val: '3',
+      userNftBalance: '',
+      ownerOfToken: '',
+      flag: false,
+      tokenId: '',
+    };
   }
   async componentDidMount() {
     await this.loadWeb3();
@@ -68,85 +83,125 @@ class App extends Component {
       const address = await this.state.erc721Contract.methods.getERC20TokenAddress().call();
       const erc20Contract = new web3.eth.Contract(abi, address)
       this.setState({ erc20Contract })
-      const totalSupplyERC20 = await erc20Contract.methods.totalSupply().call()
-      this.setState({ totalSupplyERC20 })
+      //const totalSupplyERC20 = await erc20Contract.methods.totalSupply().call()
+      //this.setState({ totalSupplyERC20 })
         // Load Tokens
        //await erc20Contract.methods.transfer(this.state.account, 1000).send({
         //from: this.state.erc721Contract.address
       //});
       console.log("ERC20 Contract Address: ", address)
       console.log("ERC20 Contract Address given by abi: ", erc20Contract.address);
-      console.log("Total supply of ERC20 tokens is: ", totalSupplyERC20)
+      //console.log("Total supply of ERC20 tokens is: ", totalSupplyERC20)
     } else {
       window.alert('Smart contract not deployed to detected network.')
     }
   }
-  mint = (hash, metadata, mintingCost, userPays) => {
-    this.state.erc721Contract.methods.mintNFT(hash, metadata, mintingCost, userPays).send({
+  mint = (hash, metadata, mintingCost) => {
+    console.log("userPays", this.state.val);
+    this.state.erc721Contract.methods.mintNFT(hash, metadata, mintingCost, this.state.val).send({
       from: this.state.account
     }).once('receipt', (receipt) => {
       if (receipt !== undefined)
-          console.log("Success!")
+        window.alert('Success!')
+      else
+        window.alert('Failure!')
     })
   }
   totalSupplyRichedu = async () => {
+    this.setState({loading: true})
     const RICHEDU = await this.state.erc20Contract.methods.totalSupply().call();
+    this.setState({totalSupplyERC20: parseInt(RICHEDU), loading: false})
     console.log("Total Supply Richedu: ", RICHEDU);
   }
   showNftDetails = async () => {
     const NftDetails = await this.state.erc721Contract.methods.NFT_details().call();
     console.log("NFT Details: ", NftDetails);
   }
-  gift = async (receipient, tokenId) => {
-    await this.state.erc721Contract.methods.giftNFT(receipient, tokenId).send({
+  gift = (receipient, tokenId) => {
+    this.setState({ loading: true });
+    this.state.erc721Contract.methods.giftNFT(receipient, tokenId).send({
       from: this.state.account
-    }).once('receipt', (receipt) => {
-      console.log("Receipt of gitNFT function is: ", receipt);
-    });
+    }).on('transactionHash', (hash) => {
+      this.setState({loading: false})
+      window.alert('Success')
+    }).on('error', (e) => {
+      this.setState({ loading: false })
+      window.alert('Error')
+    })
   }
-  stopSale = async (tokenId) => {
-    await this.state.erc721Contract.methods.stopSale(tokenId).send({
+  stopSale = (tokenId) => {
+    this.setState({ loading: true });
+    this.state.erc721Contract.methods.stopSale(tokenId).send({
       from: this.state.account
-    }).once('receipt', (receipt) => {
-      console.log("Receipt of stopSale function is: ", receipt);
-    });
+    }).on('transactionHash', (hash) => {
+      this.setState({loading: false})
+      window.alert('Success')
+    }).on('error', (e) => {
+      this.setState({ loading: false })
+      window.alert('Error')
+    })
   }
-  buyRichedu = async (event) => {
+  buyRichedu = (event) => {
     event.preventDefault();
     var val = parseInt(this.state.val);
-    console.log("Val is: ", val);
-    await this.state.erc721Contract.methods.buyRicheduToken().send({
+    this.setState({ loading: true });
+    this.state.erc721Contract.methods.buyRicheduToken().send({
       from: this.state.account,
       value: val
+    }).on('transactionHash', (hash) => {
+      this.setState({loading: false})
+      window.alert('Success')
+    }).on('error', (e) => {
+      window.alert('Error')
+      this.setState({ loading: false })
     })
   }
-  sellRichedu = async (amount) => {
-    console.log(amount);
-      await this.state.erc721Contract.methods.sellRicheduToken(amount).send({
+  sellRichedu = (amount) => {
+    this.setState({ loading: true });
+    this.state.erc721Contract.methods.sellRicheduToken(amount).send({
       from: this.state.account
-    }).once('receipt', (receipt) => {
-      console.log("Receipt of sellRichedu function is: ", receipt);
+    }).on('transactionHash', (hash) => {
+      this.setState({loading: false})
+      window.alert('Success')
+    }).on('error', (e) => {
+      this.setState({ loading: false })
+      window.alert('Error')
     })
   }
-  buy = async (tokenId, userPays) => {
-    await this.state.erc721Contract.methods.buyAtSale(tokenId, userPays).send({
+  buy = (tokenId, userPays) => {
+    this.setState({ loading: true });
+    this.state.erc721Contract.methods.buyAtSale(tokenId, userPays).send({
       from: this.state.account
-    }).once('receipt', (receipt) => {
-      console.log("Receipt of buy function is: ", receipt);
+    }).on('transactionHash', (hash) => {
+      this.setState({loading: false})
+      window.alert('Success')
+    }).on('error', (e) => {
+      this.setState({ loading: false })
+      window.alert('Error')
     })
   }
-  sellNft = async (tokenId, userPays) => {
-    await this.state.erc721Contract.methods.setPricePutOnSale(tokenId, userPays).send({
+  sellNft = (tokenId, userPays) => {
+    this.setState({ loading: true });
+    this.state.erc721Contract.methods.setPricePutOnSale(tokenId, userPays).send({
       from: this.state.account
-    }).once('receipt', (receipt) => {
-      console.log("Receipt of setPricePutOnSale function", receipt);
+    }).on('transactionHash', (hash) => {
+      this.setState({loading: false})
+      window.alert('Success')
+    }).on('error', (e) => {
+      this.setState({ loading: false })
+      window.alert('Error')
     })
   }
-  burn = async (tokenId) => {
-    await this.state.erc721Contract.methods.burnNFT(tokenId).send({
+  burn = (tokenId) => {
+    this.setState({ loading: true });
+    this.state.erc721Contract.methods.burnNFT(tokenId).send({
       from: this.state.account
-    }).once("receipt", (receipt) => {
-      console.log("Receipt of burnNFT function: ", receipt);
+    }).on('transactionHash', (hash) => {
+      this.setState({loading: false})
+      window.alert('Success')
+    }).on('error', (e) => {
+      this.setState({ loading: false })
+      window.alert('Error')
     })
   }
   ownedNft = async () => {
@@ -157,48 +212,57 @@ class App extends Component {
     console.log("Not yet done");
   }
   checkNftBalance = async (address) => {
+    this.setState({ loading: true });
     const nftBalance = await this.state.erc721Contract.methods.balanceOf(address).call();
+    this.setState({ userNftBalance: parseInt(nftBalance), loading: false });
     console.log("Number of NFTs owned by user are: ", nftBalance);
   }
   approve = async (address, tokenId) => {
     await this.state.erc721Contract.methods.approve(address, tokenId).send({
       from: this.state.account
     })
-    .once('riceipt', (receipt) => {
+    .once('receipt', (receipt) => {
       console.log("Receipt for approve function is: ", receipt);
     })
   }
   getName = async () => {
+    this.setState({ loading: true });
     const name = await this.state.erc721Contract.methods.name().call();
-    console.log("Name is: ", name);
+    this.setState({name, loading: false})
   }
-   getSymbol = async () => {
+  getSymbol = async () => {
+    this.setState({ loading: true });
     const symbol = await this.state.erc721Contract.methods.symbol().call();
-    console.log("Symbol is: ", symbol);
+    this.setState({ symbol, loading: false });
   }
   getOwner = async () => {
+    this.setState({ loading: true });
     const owner = await this.state.erc721Contract.methods.owner().call();
-    console.log("Owner is: ", owner);
+    this.setState({ owner, loading: false });
+  }
+  getContractAddress = async () => {
+    this.setState({ loading: true });
+    const address = await this.state.erc721Contract.methods.getContractAddress().call();
+    this.setState({ NftContractAddress: address, loading: false });
   }
   ownerOf = async (tokenId) => {
+    this.setState({ loading: true });
     const owner = await this.state.erc721Contract.methods.ownerOf(tokenId).call();
+    this.setState({ ownerOfToken: owner, loading: false });
     console.log("Owner of tokenId", tokenId, "is: ", owner);
   }
   getTokenByIndex = async (index) => {
+    this.setState({ loading: true });
     const token = await this.state.erc721Contract.methods.tokenByIndex(index).call();
-    console.log("Token at index ", index, "is: ", token);
+    this.setState({ loading: false, tokenId: token });
   }
-  approve = (spender,amount) => {
-    // if (error) {
-    //   console.error(error)
-    //   return
-    // }
+  approve = (spender,amount) => {   // Can be updated with async await syntax.
     this.setState({ loading: true })
     this.state.erc20Contract.methods.approve(spender, amount).send({ from: this.state.account }).on('transactionHash', (hash) => {
       this.setState({
         loading: false
       })
-      window.location.reload()
+      window.alert('Success!')
     }).on('error', (e) => {
       window.alert('Error')
       this.setState({ loading: false })
@@ -229,25 +293,26 @@ class App extends Component {
                 <code>
                   Following functions are to be added:<br></br>
                   For ERC721: <br></br>
-                  1. Mint NFT(Done)<br></br>
-                  2. Gift NFT(Done)<br></br>
-                  3. Buy NFT(Done)<br></br>
-                  4. Sell NFT(Done)<br></br>
-                  5. Burn NFT(Done)<br></br>
+                  1. Mint NFT(NOT Done)<br></br>
+                  2. Gift NFT(DDone)<br></br>
+                  3. Buy NFT(DDone)<br></br>
+                  4. Sell NFT(DDone)<br></br>
+                  5. Burn NFT(DDone)<br></br>
                   6. List all NFT's for sale(NOT DONE)<br></br>
-                  7. List user owned NFT's(Done)<br></br>
-                  8. Stop sale(Done)<br></br>
-                  9. Show NFT details(Done)<br></br>
-                  10. Buy richedu tokens(NOT DONE)<br></br>
-                  11. Sell richedu tokens(Done)<br></br>
-                  12. Balance of user(Done)<br></br>
-                  13. Approve(NOT DONE) <br></br>
-                  14. Get Name(Done) <br></br>
-                  15. Get Symbol(Done) <br></br>
-                  16. Get Owner(Done) <br></br>
-                  17. Owner Of TokenId(Done) <br></br>
-                  18. Get Token by Index(Done) <br></br>
-
+                  7. List user owned NFT's(NOT Done)<br></br>
+                  8. Stop sale(DDone)<br></br>
+                  9. Show NFT details(Not Done)<br></br>
+                  10. Buy richedu tokens(FDONE)<br></br>
+                  11. Sell richedu tokens(NOT Done)<br></br>
+                  12. Balance of user(FDone)<br></br>
+                  13. Approve(FDONE) <br></br>
+                  14. Get Name(FDone) <br></br>
+                  15. Get Symbol(FDone) <br></br>
+                  16. Get Owner(FDone) <br></br>
+                  17. Owner Of TokenId(FDone) <br></br>
+                  18. Get Token by Index(DDone) <br></br>
+                  19. Get Users NFT balance(FDone) <br></br>
+                  20. Get Contract Address(FDone)
 <br></br>
                   FOR ERC20:<br></br>
                   1. Show user's richedu balance<br></br>
@@ -265,7 +330,8 @@ class App extends Component {
               event.preventDefault();
               this.getName();
            }}>
-          <input type='submit' className='btn btn-primary ' value='GET NAME'></input>
+              <input type='submit' className='btn btn-primary ' value='GET NAME'></input>
+              <h4>{ this.state.name }</h4>
           </form>
           </div>
            <hr />
@@ -275,7 +341,19 @@ class App extends Component {
               event.preventDefault();
               this.getSymbol();
            }}>
-          <input type='submit' className='btn btn-primary ' value='GET SYMBOL'></input>
+              <input type='submit' className='btn btn-primary ' value='GET SYMBOL'></input>
+              <h4>{ this.state.symbol }</h4>
+          </form>
+          </div>
+          <hr />
+          <div>
+          <h3>Get Contract Address</h3>
+            <form onSubmit={(event) => {
+              event.preventDefault();
+              this.getContractAddress();
+           }}>
+              <input type='submit' className='btn btn-primary ' value='GET CONTRACT ADDRESS'></input>
+              <h4>{ this.state.NftContractAddress }</h4>
           </form>
           </div>
           <hr />
@@ -285,7 +363,8 @@ class App extends Component {
               event.preventDefault();
               this.getOwner();
            }}>
-          <input type='submit' className='btn btn-primary ' value='GET OWNER'></input>
+              <input type='submit' className='btn btn-primary ' value='GET OWNER'></input>
+              <h4>{ this.state.owner}</h4>
           </form>
           </div>
           <hr />
@@ -297,7 +376,8 @@ class App extends Component {
               this.ownerOf(tokenId);
             }}>
           <input className='p-3' placeholder='_tokenId' ref={ (input) =>{this.tokenId = input }}/>
-          <input type='submit' className='btn btn-primary ' value='GET OWNER OF TOKEN'></input>
+              <input type='submit' className='btn btn-primary ' value='GET OWNER OF TOKEN'></input>
+              <h4>Owner of tokenID is: { this.state.ownerOfToken }</h4>
           </form>
           </div>
           <hr />
@@ -309,19 +389,15 @@ class App extends Component {
               this.getTokenByIndex(index);
             }}>
           <input className='p-3' placeholder='_index' ref={ (input) =>{this.index = input }}/>
-          <input type='submit' className='btn btn-primary ' value='GET TOKEN BY INDEX'></input>
+              <input type='submit' className='btn btn-primary ' value='GET TOKEN BY INDEX'></input>
+              <h4>{ this.state.tokenId}</h4>
           </form>
           </div>
           <hr />
           <div>
           <h3>Buy Richedu Tokens</h3>
             <form onSubmit={this.buyRichedu}>
-              <input
-              className='p-3'
-              placeholder='_amount'
-                value={this.state.val}
-                onChange={event=>this.setState({val: event.target.value})}
-              />
+              <input className='p-3' placeholder='_amount' value={this.state.val} onChange={event=>this.setState({val: event.target.value})} />
             <input type='submit' className='btn btn-primary ' value='BUY RICHEDU'></input>
           </form>
           </div>
@@ -342,6 +418,7 @@ class App extends Component {
             this.totalSupplyRichedu()
         }}>
             <input type='submit' className='btn btn-primary ' value='TOTAL SUPPLY(RICHEDU)'></input>
+            <h4>{ this.state.totalSupplyERC20 }</h4>
         </form>
           <hr />
            <div>
@@ -403,14 +480,14 @@ class App extends Component {
           const hash = this.coffeeHash.value
           const metadata = this.metadata.value
           var mintingCost = this.mintingCost.value.toString()
-          var userPays = this.userPays.value.toString()
-          this.mint(hash, metadata, mintingCost, userPays)
+            this.setState({ val: this.userPays.value.toString() });
+          this.mint(hash, metadata, mintingCost)
         }}>
           <input type='text' className='p-3' placeholder='e.g. _Hash' ref={(input) => { this.coffeeHash = input }}></input>
           <input type='text' className='p-3' placeholder='e.g. _Metadata' ref={(input) => { this.metadata = input }}></input>
           <input type='text' className='p-3' placeholder='e.g. _MintingCost' ref={(input) => { this.mintingCost = input }}></input>
           <input type='text' className='p-3' placeholder='e.g. _UserPays' ref={(input) => { this.userPays = input }}></input>
-          <input type='submit' className='btn btn-primary ' value='MINT'></input>
+            <input type='submit' className='btn btn-primary ' value='MINT'></input>
         </form>
           <hr />
         <div>
@@ -513,7 +590,8 @@ class App extends Component {
           this.checkNftBalance(address)
             }}>
             <input type='text' className='p-3' placeholder='_address' ref={(input) => { this.address = input }}></input>
-            <input type='submit' className='btn btn-primary ' value='CHECK BALANCE(NFT)'></input>
+              <input type='submit' className='btn btn-primary ' value='CHECK BALANCE(NFT)'></input>
+              <h4>{ this.state.userNftBalance}</h4>
         </form>
         </div>
           <hr />

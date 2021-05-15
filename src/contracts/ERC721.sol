@@ -109,6 +109,10 @@ contract CryptoCoffee is ERC721Enumerable, ERC721URIStorage, Ownable {
         payable(msg.sender).transfer(_amount); // Send ETH to caller.
     }
 
+    function getContractAddress() external view returns (address) {
+        return address(this);
+    }
+
     function mintNFT(
         string memory _hash,
         string memory _metadata,
