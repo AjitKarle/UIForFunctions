@@ -1,8 +1,15 @@
 import React, { Component } from 'react';
+//import { BrowserRouter as Router, Route } from 'react-router-dom';
 import './App.css';
 import Web3 from 'web3';
 import Cybercafe from '../abis/Cybercafe.json'
 import CryptoCoffee from '../abis/CryptoCoffee.json';
+import Kitchen from './Kitchen.jsx';
+import DiningTable from './DiningTable.jsx';
+import Marketplace from './Marketplace.jsx';
+import Home from './Home.jsx';
+import IpfsFileUpload from './IPFS.js';
+import NftBank from './NftBank';
 
 class App extends Component {
   constructor(props) {
@@ -15,9 +22,10 @@ class App extends Component {
       account: '',
       erc20Contract: null,
       erc721Contract: null,
+      ERC721ContractAddress: '',
+      ERC20ContactAddress: '',
       totalSupplyERC721: '',
       totalSupplyERC20: '',
-      val: '3',
       userNftBalance: '',
       ownerOfToken: '',
       flag: false,
@@ -96,9 +104,9 @@ class App extends Component {
       window.alert('Smart contract not deployed to detected network.')
     }
   }
-  mint = (hash, metadata, mintingCost) => {
-    console.log("userPays", this.state.val);
-    this.state.erc721Contract.methods.mintNFT(hash, metadata, mintingCost, this.state.val).send({
+  mint = (hash, metadata, mintingCost, userPays) => {
+    console.log("userPays", userPays);
+    this.state.erc721Contract.methods.mintNFT(hash, metadata, window.web3.utils.toWei(mintingCost, "ether"), window.web3.utils.toWei(userPays, "ether")).send({
       from: this.state.account
     }).once('receipt', (receipt) => {
       if (receipt !== undefined)
@@ -107,15 +115,18 @@ class App extends Component {
         window.alert('Failure!')
     })
   }
-  totalSupplyRichedu = async () => {
+  totalSupplyERC20 = async () => {
     this.setState({loading: true})
-    const RICHEDU = await this.state.erc20Contract.methods.totalSupply().call();
-    this.setState({totalSupplyERC20: parseInt(RICHEDU), loading: false})
-    console.log("Total Supply Richedu: ", RICHEDU);
+    const totalSupply = await this.state.erc20Contract.methods.totalSupply().call();
+    this.setState({loading: false})
+    return totalSupply.toString();
   }
-  showNftDetails = async () => {
-    const NftDetails = await this.state.erc721Contract.methods.NFT_details().call();
-    console.log("NFT Details: ", NftDetails);
+  showNftDetails = async (tokenId) => {
+    this.setState({ loading: true });
+    const NftDetails = await this.state.erc721Contract.methods.NFT_details(tokenId).call();
+    console.log("NFT Details are: ", NftDetails);
+    this.setState({ loading: false });
+    return NftDetails.toString();
   }
   gift = (receipient, tokenId) => {
     this.setState({ loading: true });
@@ -141,13 +152,12 @@ class App extends Component {
       window.alert('Error')
     })
   }
-  buyRichedu = (event) => {
-    event.preventDefault();
-    var val = parseInt(this.state.val);
+  buyRichedu = (val) => {
+    console.log("Inside buyRichedu and value is: ", val);
     this.setState({ loading: true });
     this.state.erc721Contract.methods.buyRicheduToken().send({
       from: this.state.account,
-      value: val
+      value: window.web3.utils.toWei(val.toString(), "ether")
     }).on('transactionHash', (hash) => {
       this.setState({loading: false})
       window.alert('Success')
@@ -158,7 +168,7 @@ class App extends Component {
   }
   sellRichedu = (amount) => {
     this.setState({ loading: true });
-    this.state.erc721Contract.methods.sellRicheduToken(amount).send({
+    this.state.erc721Contract.methods.sellRicheduToken(window.web3.utils.toWei(amount.toString(), "ether")).send({
       from: this.state.account
     }).on('transactionHash', (hash) => {
       this.setState({loading: false})
@@ -205,60 +215,83 @@ class App extends Component {
     })
   }
   ownedNft = async () => {
+    this.setState({loading: true});
     const ownedNFTs = await this.state.erc721Contract.methods.owned_NFTs().call();
-    console.log("User owned NFTs are: ", ownedNFTs);
+    this.setState({loading: false});
+    return ownedNFTs;
   }
   listNFTsForSale = async () => {
-    console.log("Not yet done");
+    this.setState({loading: true});
+    const onSaleNfts = await this.state.erc721Contract.methods.onSaleNFTs().call();
+    this.setState({loading: false});
+    return onSaleNfts;
   }
   checkNftBalance = async (address) => {
     this.setState({ loading: true });
     const nftBalance = await this.state.erc721Contract.methods.balanceOf(address).call();
-    this.setState({ userNftBalance: parseInt(nftBalance), loading: false });
-    console.log("Number of NFTs owned by user are: ", nftBalance);
+    this.setState({loading: false});
+    return nftBalance;
   }
-  approve = async (address, tokenId) => {
-    await this.state.erc721Contract.methods.approve(address, tokenId).send({
+  approve = (address, tokenId) => {
+    this.setState({loading: true});
+    this.state.erc721Contract.methods.approve(address, tokenId).send({
       from: this.state.account
-    })
-    .once('receipt', (receipt) => {
-      console.log("Receipt for approve function is: ", receipt);
+    }).on('transactionHash', (hash) => {
+      this.setState({
+        loading: false
+      })
+      window.alert('Success!')
+    }).on('error', (e) => {
+      window.alert('Error')
+      this.setState({ loading: false })
     })
   }
   getName = async () => {
     this.setState({ loading: true });
     const name = await this.state.erc721Contract.methods.name().call();
-    this.setState({name, loading: false})
+    this.setState({ loading: false });
+    return name;
   }
   getSymbol = async () => {
     this.setState({ loading: true });
     const symbol = await this.state.erc721Contract.methods.symbol().call();
-    this.setState({ symbol, loading: false });
+    this.setState({ loading: false });
+    return symbol;
   }
   getOwner = async () => {
     this.setState({ loading: true });
     const owner = await this.state.erc721Contract.methods.owner().call();
-    this.setState({ owner, loading: false });
+    this.setState({ loading: false });
+    return owner;
   }
-  getContractAddress = async () => {
+  getERC721ContractAddress = async () => {
     this.setState({ loading: true });
     const address = await this.state.erc721Contract.methods.getContractAddress().call();
-    this.setState({ NftContractAddress: address, loading: false });
+    this.setState({ loading: false });
+    return address;
+  }
+  getERC20ContractAddress = async () => {
+    this.setState({ loading: true });
+    const address = this.state.erc20Contract.address;
+    this.setState({ loading: false });
+    return address;
   }
   ownerOf = async (tokenId) => {
     this.setState({ loading: true });
     const owner = await this.state.erc721Contract.methods.ownerOf(tokenId).call();
-    this.setState({ ownerOfToken: owner, loading: false });
-    console.log("Owner of tokenId", tokenId, "is: ", owner);
+    this.setState({loading: false});
+    return owner;
   }
   getTokenByIndex = async (index) => {
     this.setState({ loading: true });
     const token = await this.state.erc721Contract.methods.tokenByIndex(index).call();
-    this.setState({ loading: false, tokenId: token });
+    this.setState({loading: false});
+    return token;
   }
-  approve = (spender,amount) => {   // Can be updated with async await syntax.
+  approve_erc20 = (spender,amount) => {   // Can be updated with async await syntax.
+    console.log("spender is: ", spender);
     this.setState({ loading: true })
-    this.state.erc20Contract.methods.approve(spender, amount).send({ from: this.state.account }).on('transactionHash', (hash) => {
+    this.state.erc20Contract.methods.approve(spender, window.web3.utils.toWei(amount.toString(), "ether")).send({ from: this.state.account }).on('transactionHash', (hash) => {
       this.setState({
         loading: false
       })
@@ -293,310 +326,46 @@ class App extends Component {
                 <code>
                   Following functions are to be added:<br></br>
                   For ERC721: <br></br>
-                  1. Mint NFT(NOT Done)<br></br>
-                  2. Gift NFT(DDone)<br></br>
-                  3. Buy NFT(DDone)<br></br>
-                  4. Sell NFT(DDone)<br></br>
-                  5. Burn NFT(DDone)<br></br>
-                  6. List all NFT's for sale(NOT DONE)<br></br>
-                  7. List user owned NFT's(NOT Done)<br></br>
-                  8. Stop sale(DDone)<br></br>
-                  9. Show NFT details(Not Done)<br></br>
-                  10. Buy richedu tokens(FDONE)<br></br>
-                  11. Sell richedu tokens(NOT Done)<br></br>
-                  12. Balance of user(FDone)<br></br>
-                  13. Approve(FDONE) <br></br>
-                  14. Get Name(FDone) <br></br>
-                  15. Get Symbol(FDone) <br></br>
-                  16. Get Owner(FDone) <br></br>
-                  17. Owner Of TokenId(FDone) <br></br>
-                  18. Get Token by Index(DDone) <br></br>
-                  19. Get Users NFT balance(FDone) <br></br>
-                  20. Get Contract Address(FDone)
+                  1. Mint NFT(NOT Done)(Kitchen)<br></br>
+                  2. Gift NFT(DDone)diningtable<br></br>
+                  3. Buy NFT(DDone)market<br></br>
+                  4. Sell NFT(DDone)dt<br></br>
+                  5. Burn NFT(DDone)dt<br></br>
+                  6. List all NFT's for sale(NOT DONE)market<br></br>
+                  7. List user owned NFT's(NOT Done)dt<br></br>
+                  8. Stop sale(DDone)dt<br></br>
+                  9. Show NFT details(Not Done)dt<br></br>
+                  10. Buy richedu tokens(FDONE)app<br></br>
+                  11. Sell richedu tokens(NOT Done)app<br></br>
+                  12. Balance of user(FDone)dt<br></br>
+                  13. Approve(FDONE)dt <br></br>
+                  14. Get Name(FDone) app<br></br>
+                  15. Get Symbol(FDone)app <br></br>
+                  16. Get Owner(FDone) app<br></br>
+                  17. Owner Of TokenId(FDone) market<br></br>
+                  18. Get Token by Index(DDone) market<br></br>
+                  19. Get Users NFT balance(FDone) dt<br></br>
+                  20. Get ERC721 Contract Address(FDone)app  <br></br>
+                  21. Get ERC20 Contract Address() app
 <br></br>
                   FOR ERC20:<br></br>
                   1. Show user's richedu balance<br></br>
-                  2. Approve<br></br>
+                  2. Approve_erc20()app<br></br>
                   3. Transfer<br></br>
                   4. Total supply<br></br>
                 </code>
               </div>
             </main>
           </div>
-           <hr />
-          <div>
-          <h3>Get Name</h3>
-            <form onSubmit={(event) => {
-              event.preventDefault();
-              this.getName();
-           }}>
-              <input type='submit' className='btn btn-primary ' value='GET NAME'></input>
-              <h4>{ this.state.name }</h4>
-          </form>
-          </div>
-           <hr />
-          <div>
-          <h3>Get Symbol</h3>
-            <form onSubmit={(event) => {
-              event.preventDefault();
-              this.getSymbol();
-           }}>
-              <input type='submit' className='btn btn-primary ' value='GET SYMBOL'></input>
-              <h4>{ this.state.symbol }</h4>
-          </form>
-          </div>
-          <hr />
-          <div>
-          <h3>Get Contract Address</h3>
-            <form onSubmit={(event) => {
-              event.preventDefault();
-              this.getContractAddress();
-           }}>
-              <input type='submit' className='btn btn-primary ' value='GET CONTRACT ADDRESS'></input>
-              <h4>{ this.state.NftContractAddress }</h4>
-          </form>
-          </div>
-          <hr />
-          <div>
-          <h3>Get Owner</h3>
-            <form onSubmit={(event) => {
-              event.preventDefault();
-              this.getOwner();
-           }}>
-              <input type='submit' className='btn btn-primary ' value='GET OWNER'></input>
-              <h4>{ this.state.owner}</h4>
-          </form>
-          </div>
-          <hr />
-          <div>
-          <h3>Owner of TokenID</h3>
-            <form onSubmit={(event) => {
-              event.preventDefault();
-              const tokenId = this.tokenId.value;
-              this.ownerOf(tokenId);
-            }}>
-          <input className='p-3' placeholder='_tokenId' ref={ (input) =>{this.tokenId = input }}/>
-              <input type='submit' className='btn btn-primary ' value='GET OWNER OF TOKEN'></input>
-              <h4>Owner of tokenID is: { this.state.ownerOfToken }</h4>
-          </form>
-          </div>
-          <hr />
-          <div>
-          <h3>Get Token by Index</h3>
-            <form onSubmit={(event) => {
-              event.preventDefault();
-              const index = this.index.value;
-              this.getTokenByIndex(index);
-            }}>
-          <input className='p-3' placeholder='_index' ref={ (input) =>{this.index = input }}/>
-              <input type='submit' className='btn btn-primary ' value='GET TOKEN BY INDEX'></input>
-              <h4>{ this.state.tokenId}</h4>
-          </form>
-          </div>
-          <hr />
-          <div>
-          <h3>Buy Richedu Tokens</h3>
-            <form onSubmit={this.buyRichedu}>
-              <input className='p-3' placeholder='_amount' value={this.state.val} onChange={event=>this.setState({val: event.target.value})} />
-            <input type='submit' className='btn btn-primary ' value='BUY RICHEDU'></input>
-          </form>
-          </div>
-          <hr />
-           <div>
-          <h3>List NFT'S for Sale</h3>
-            <form onSubmit={(event) => {
-              event.preventDefault();
-              this.listNFTsForSale();
-           }}>
-            <input type='submit' className='btn btn-primary ' value='LIST'></input>
-          </form>
-          </div>
-          <hr />
-           <h3>Total Supply of RICHEDU</h3>
-        <form onSubmit={(event) => {
-            event.preventDefault()
-            this.totalSupplyRichedu()
-        }}>
-            <input type='submit' className='btn btn-primary ' value='TOTAL SUPPLY(RICHEDU)'></input>
-            <h4>{ this.state.totalSupplyERC20 }</h4>
-        </form>
-          <hr />
-           <div>
-          <h3>List User's owned NFT's</h3>
-            <form onSubmit={(event) => {
-              event.preventDefault()
-              this.ownedNft()
-           }}>
-            <input type='submit' className='btn btn-primary ' value='LIST OWNED NFTs'></input>
-          </form>
-          </div>
-          <hr />
-          <div>
-            <div className="card mb-3 mx-auto bg-dark col-md-6" style={{ maxWidth: '720px' }}>
-                  <br></br>
-                  <h2 className="text-white text-monospace bg-dark" style={{ padding: '75px;' }}><b>Approve spender</b></h2>
-                  <form onSubmit={(event) => {
-                    event.preventDefault()
-                    const spender = this.spender.value
-                    const amount = this.amount.value
-                    this.approve(spender, amount)
-                  }} >
-                    <div className="form-group">
-                      <br></br>
-                      <input
-                        id="spender"
-                        type="text"
-                        ref={(input) => { this.spender = input }}
-                        className="form-control text-monospace"
-                        placeholder="Spender contract address (ERC721)"
-                        required />
-                      <input
-                        id="amount"
-                        type="text"
-                        ref={(input) => { this.amount = input }}
-                        className="form-control text-monospace"
-                        placeholder="Amount allowed to spend"
-                        required />
-                    </div>
-                    <p className="text-white text-monospace bg-dark">{this.props.account}</p>
-                    <button type="submit" className="btn-primary btn-block" style={{ backgroundColor: 'dimgray' }}><b>Approve</b></button>
-                  </form>
-            </div>
-            <hr />
-          <h3>Sell Richedu Tokens</h3>
-            <form onSubmit={(event) => {
-              event.preventDefault();
-              const amount = this.amount.value;
-              this.sellRichedu(amount);
-           }}>
-              <input className='p-3' placeholder='_amount' ref={ (input) =>{this.amount = input }}/>
-            <input type='submit' className='btn btn-primary ' value='SELL RICHEDU'></input>
-          </form>
-          </div>
-          <hr />
-          <h3>Mint NFT(mintNFT)</h3>
-        <form onSubmit={(event) => {
-          event.preventDefault()
-          const hash = this.coffeeHash.value
-          const metadata = this.metadata.value
-          var mintingCost = this.mintingCost.value.toString()
-            this.setState({ val: this.userPays.value.toString() });
-          this.mint(hash, metadata, mintingCost)
-        }}>
-          <input type='text' className='p-3' placeholder='e.g. _Hash' ref={(input) => { this.coffeeHash = input }}></input>
-          <input type='text' className='p-3' placeholder='e.g. _Metadata' ref={(input) => { this.metadata = input }}></input>
-          <input type='text' className='p-3' placeholder='e.g. _MintingCost' ref={(input) => { this.mintingCost = input }}></input>
-          <input type='text' className='p-3' placeholder='e.g. _UserPays' ref={(input) => { this.userPays = input }}></input>
-            <input type='submit' className='btn btn-primary ' value='MINT'></input>
-        </form>
-          <hr />
-        <div>
-          <h3>Show NFT Details</h3>
-            <form onSubmit={(event) => {
-              event.preventDefault();
-              const tokenId = this.tokenId.value;
-              this.showNftDetails(tokenId);
-           }}>
-            <input className='p-3' placeholder='_tokenId' ref={(input) => {this.tokenId = input}} />
-            <input type='submit' className='btn btn-primary ' value='SHOW'></input>
-          </form>
-          </div>
-          <hr />
-        <div>
-          <h3>Sell NFT(setPricePutOnSale)</h3>
-            <form onSubmit={(event) => {
-              event.preventDefault();
-              const tokenId = this.tokenId.value;
-              const userPays = this.userPays.value;
-              this.sellNft(tokenId, userPays);
-            }}>
-              <input className='p-3' placeholder='_tokenId' ref={(input) => {this.tokenId = input}}/>
-              <input className='p-3' placeholder='_userPays' ref={(input) => {this.userPays = input}}/>
-            <input type='submit' className='btn btn-primary ' value='SELL'></input>
-          </form>
-        </div>
         <hr />
-        <div>
-          <h3>Buy NFT(buyAtSale)</h3>
-            <form onSubmit={(event) => {
-              event.preventDefault();
-              const tokenId = this.tokenId.value;
-              const userPays = this.userPays.value;
-              this.buy(tokenId, userPays);
-            }}>
-              <input className='p-3' placeholder='_tokenId' ref={ (input) => {this.tokenId = input}}/>
-              <input className='p-3' placeholder='_userPays' ref={(input) =>{this.userPays = input}}/>
-            <input type='submit' className='btn btn-primary ' value='BUY'></input>
-        </form>
+        <Home getName={this.getName} getSymbol={this.getSymbol} getERC20ContractAddress={this.getERC20ContractAddress} getERC721ContractAddress={this.getERC721ContractAddress} getOwner={this.getOwner}></Home>
+        <Kitchen mint = {this.mint} approve_erc20 = {this.approve_erc20} erc721Contract = {this.state.erc721Contract}/>
+        <DiningTable approve={this.approve} burn={this.burn} gift={this.gift} stopSale={this.stopSale} checkNftBalance={this.checkNftBalance} sellNft={this.sellNft} showNftDetails={this.showNftDetails} ownedNft={this.ownedNft} />
+        <Marketplace buy={this.buy} getTokenByIndex={this.getTokenByIndex} ownerOf={this.ownerOf} listNFTsForSale={this.listNFTsForSale}></Marketplace>
+        <NftBank buyRichedu = {this.buyRichedu} totalSupplyERC20={this.totalSupplyERC20} sellRichedu = {this.sellRichedu} erc721Contract={this.state.erc721Contract} approve_erc20 = {this.approve_erc20}></NftBank>
+        <IpfsFileUpload></IpfsFileUpload>
         </div>
-          <hr />
-          <div>
-          <h3>Approve(approve)</h3>
-          <form onSubmit={(event) => {
-          event.preventDefault()
-              const address = this.address.value;
-              const tokenId = this.tokenId.value;
-              this.approve(address, tokenId);
-            }}>
-            <input type='text' className='p-3' placeholder='_address' ref={(input) => {this.address = input}}></input>
-            <input type='text' className='p-3' placeholder='_tokenId' ref={(input) => {this.tokenId = input}}></input>
-            <input type='submit' className='btn btn-primary ' value='APPROVE'></input>
-        </form>
         </div>
-          <hr />
-        <div>
-          <h3>Burn NFT(burnNFT)</h3>
-          <form onSubmit={(event) => {
-          event.preventDefault()
-          const tokenId = this.tokenId.value
-          this.burn(tokenId)
-        }}>
-            <input type='text' className='p-3' placeholder='_tokenId' ref={(input) => {this.tokenId = input}}></input>
-            <input type='submit' className='btn btn-primary ' value='BURN'></input>
-        </form>
-          </div>
-          <hr />
-          <div>
-          <h3>Gift NFT(giftNFT)</h3>
-          <form onSubmit={(event) => {
-          event.preventDefault()
-          const receipient = this.receipient.value;
-          const tokenId = this.tokenId.value;
-              this.gift(receipient, tokenId);
-            }}>
-              <input type='text' className='p-3' placeholder='_receiverAddress' ref={(input) => { this.receipient = input }}></input>
-            <input type='text' className='p-3' placeholder='_tokenId' ref={(input) => {this.tokenId = input }}></input>
-            <input type='submit' className='btn btn-primary ' value='GIFT'></input>
-        </form>
-          </div>
-          <hr/>
-        <div>
-          <h3>Stop Sale(stopSale)</h3>
-          <form onSubmit={(event) => {
-          event.preventDefault()
-          const tokenId = this.tokenId.value
-          this.stopSale(tokenId)
-        }}>
-            <input type='text' className='p-3' placeholder='_tokenId' ref={(input) =>{this.tokenId = input}}></input>
-            <input type='submit' className='btn btn-primary ' value='STOP'></input>
-        </form>
-        </div>
-          <hr />
-          <div>
-          <h3> Check Balance(Number of owned NFTs)</h3>
-          <form onSubmit={(event) => {
-              event.preventDefault()
-              const address = this.address.value;
-          this.checkNftBalance(address)
-            }}>
-            <input type='text' className='p-3' placeholder='_address' ref={(input) => { this.address = input }}></input>
-              <input type='submit' className='btn btn-primary ' value='CHECK BALANCE(NFT)'></input>
-              <h4>{ this.state.userNftBalance}</h4>
-        </form>
-        </div>
-          <hr />
-        </div>
-      </div>
     );
   }
 }

@@ -192,6 +192,7 @@ contract CryptoCoffee is ERC721Enumerable, ERC721URIStorage, Ownable {
         // Send an NFT for zero RCED tokens.
         require(tokenIdToNft[_tokenId].onSale != true);
         safeTransferFrom(msg.sender, _giftTo, _tokenId);
+        tokenIdToNft[_tokenId].owner = _giftTo;
         emit Transfer(msg.sender, _giftTo, _tokenId);
     }
 
@@ -205,7 +206,25 @@ contract CryptoCoffee is ERC721Enumerable, ERC721URIStorage, Ownable {
         }
         return nftList;
     }
-
+     function onSaleNFTs() external view returns (uint256[] memory) {
+        // Returns token IDs of NFTs which are on sale.
+        uint256 arraySize = 0;
+        uint256 tokenIndex = 0;
+        uint256 i = 0;
+        uint256 totalSupply = totalSupply();
+        for(tokenIndex=0;tokenIndex<totalSupply;tokenIndex++) {
+            if(tokenIdToNft[tokenIndex].onSale)
+            arraySize++;
+        }
+        uint256[] memory nftList = new uint256[](arraySize);
+        for(tokenIndex=0;tokenIndex<totalSupply;tokenIndex++) {
+            if(tokenIdToNft[tokenIndex].onSale) {
+                nftList[i] = tokenIndex;
+                i++;
+            }
+        }
+        return nftList;
+    }
     function NFT_details(uint256 _tokenId)
         external
         view
