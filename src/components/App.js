@@ -1,4 +1,5 @@
 import React, { Component } from 'react';
+import { Button, Table, Form } from 'react-bootstrap';
 //import { BrowserRouter as Router, Route } from 'react-router-dom';
 import './App.css';
 import Web3 from 'web3';
@@ -8,8 +9,13 @@ import Kitchen from './Kitchen.jsx';
 import DiningTable from './DiningTable.jsx';
 import Marketplace from './Marketplace.jsx';
 import Home from './Home.jsx';
-import IpfsFileUpload from './IPFS.js';
+// import IpfsFileUpload from './DummyIpfs.js';
 import NftBank from './NftBank';
+import ipfsmeta from './IpfsMetadata.json';
+
+const IPFS = require('ipfs-api');
+const ipfs = new IPFS({ host: 'ipfs.infura.io', port: 5001, protocol: 'https' });
+
 
 class App extends Component {
   constructor(props) {
@@ -30,6 +36,14 @@ class App extends Component {
       ownerOfToken: '',
       flag: false,
       tokenId: '',
+      mintingCost: 3,
+      name: '',
+      description: '',
+      specialFeature: '',
+      ipfsHashImage: 'default',
+      ipfsHashMetadata: 'default',
+      buffer:'',
+      transactionHash:'',
     };
   }
   async componentDidMount() {
@@ -301,6 +315,58 @@ class App extends Component {
       this.setState({ loading: false })
     })
   }
+    onSubmit = async () => {
+          this.setState({loading: true})
+          await ipfs.add(this.state.buffer, (err, ipfsHash) => {
+            console.log(err,ipfsHash);
+            this.setState({ ipfsHashImage:ipfsHash[0].hash });
+            this.onSubmitForMetadata();
+          });
+        };
+        onSubmitForMetadata = async ()=> {
+          ipfsmeta.name = this.state.name;
+          ipfsmeta.description = this.state.description;
+          ipfsmeta.imageHash = this.state.ipfsHashImage;
+          ipfsmeta.specialFeature = this.state.specialFeature;
+          console.log(ipfsmeta);
+          await ipfs.files.add(Buffer.from(JSON.stringify(ipfsmeta)), (err,ipfsHash) => {
+            console.log(err,ipfsHash);
+            this.setState({ ipfshashMetadata:ipfsHash[0].hash });
+            this.mint(this.state.ipfsHashImage, this.state.ipfshashMetadata,this.state.mintingCost, this.state.mintingCost).send({
+              from: this.state.account
+            }, (error, transactionHash) => {
+              console.log(transactionHash);
+            });
+          });
+          this.setState({ loading: false });
+        }
+    captureFile =(event) => {
+            event.stopPropagation()
+            event.preventDefault()
+            const file = event.target.files[0]
+            let reader = new window.FileReader()
+            reader.readAsArrayBuffer(file)
+            reader.onloadend = () => this.convertToBuffer(reader)
+          };
+
+    convertToBuffer = async(reader) => {
+            const buffer = await Buffer.from(reader.result);
+            this.setState({buffer});
+      };
+
+        setName = async (event) => {
+          event.preventDefault();
+          this.setState({name:event.target.value});
+        }
+        setDescription = async (event) => {
+          event.preventDefault();
+          this.setState({description:event.target.value});
+        }
+        setSpecialFeature = async (event) => {
+          event.preventDefault();
+          this.setState({specialFeature:event.target.value});
+        }
+
   render() {
     return (
       <div>
@@ -346,8 +412,7 @@ class App extends Component {
                   18. Get Token by Index(DDone) market<br></br>
                   19. Get Users NFT balance(FDone) dt<br></br>
                   20. Get ERC721 Contract Address(FDone)app  <br></br>
-                  21. Get ERC20 Contract Address() app
-<br></br>
+                  21. Get ERC20 Contract Address() app<br></br>
                   FOR ERC20:<br></br>
                   1. Show user's richedu balance<br></br>
                   2. Approve_erc20()app<br></br>
@@ -363,7 +428,66 @@ class App extends Component {
         <DiningTable approve={this.approve} burn={this.burn} gift={this.gift} stopSale={this.stopSale} checkNftBalance={this.checkNftBalance} sellNft={this.sellNft} showNftDetails={this.showNftDetails} ownedNft={this.ownedNft} />
         <Marketplace buy={this.buy} getTokenByIndex={this.getTokenByIndex} ownerOf={this.ownerOf} listNFTsForSale={this.listNFTsForSale}></Marketplace>
         <NftBank buyRichedu = {this.buyRichedu} totalSupplyERC20={this.totalSupplyERC20} sellRichedu = {this.sellRichedu} erc721Contract={this.state.erc721Contract} approve_erc20 = {this.approve_erc20}></NftBank>
-        <IpfsFileUpload></IpfsFileUpload>
+          {/* <IpfsFileUpload submit={this.onSubmit}></IpfsFileUpload> */} 
+          <div className="table">
+            <div className="centerbody">
+          <Form onSubmit={this.onSubmit}>
+            <label className="heading-2">Name of your coffee</label>
+            <input
+            value= {this.state.name}
+            onChange = {this.setName} />
+            <br />
+            <label >Description of your coffee</label>
+            <input
+            value= {this.state.description}
+            onChange = {this.setDescription} />
+            <div>
+              <label className="a2">Special feature of your coffee</label>
+              <input className="input-a2"
+              value= {this.state.specialFeature}
+              onChange = {this.setSpecialFeature} />
+            </div>
+            <div>
+            <label>
+                Select coffee image
+            </label>
+            <input type="file" onChange = {this.captureFile} />
+            </div>
+            <Button className="B1"
+              bsStyle="primary"
+              type="submit">
+              UPLOAD
+            </Button>
+          </Form>
+          <Table bordered responsive>
+            <thead>
+              <tr>
+                <th className="A">Values</th>
+              </tr>
+            </thead>
+
+            <tbody>
+                <tr>
+                <td className="B">NFT image hash</td>
+                <td>{this.state.ipfsHashImage}</td>
+              </tr>
+              <tr>
+                <td className="C">Ethereum Contract Address</td>
+                <td>default</td>
+              </tr>
+              <tr>
+                <td className="D">NFT metadata hash</td>
+                <td>{this.state.ipfsHashMetadata}</td>
+              </tr>
+              <tr>
+                <td className="E">You Can see your image</td>
+                <td><a href={ `https://ipfs.infura.io/ipfs/${this.state.ipfsHashImage}` } >here</a></td>
+                <td className="F">After Uploading</td>
+              </tr>
+            </tbody>
+          </Table>
+        </div>
+        </div>
         </div>
         </div>
     );

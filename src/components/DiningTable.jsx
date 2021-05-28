@@ -109,11 +109,11 @@ class DiningTable extends Component {
         <hr />
         <div>
           <h3>Show NFT Details</h3>
-            <form onSubmit={(event) => {
+            <form onSubmit={async (event) => {
               event.preventDefault();
               const tokenId = this.tokenId.value;
-              const NftDetails = this.props.showNftDetails(tokenId);
-              this.setState({NftDetails});
+              var NftDetails = await this.props.showNftDetails(tokenId);
+              this.setState({ NftDetails });
            }}>
             <input className='p-3' placeholder='_tokenId' ref={(input) => {this.tokenId = input}} />
             <input type='submit' className='btn btn-primary ' value='SHOW'></input>

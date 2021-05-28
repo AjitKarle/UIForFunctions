@@ -4,6 +4,11 @@ const ipfs = new IPFS({ host: 'ipfs.infura.io', port: 5001, protocol: 'https' })
 
 class IpfsFileUpload extends Component {
     constructor(props) {
+        /* 
+        Tasks: 
+        1. Take an image store it to the ipfs using pinata.
+        2. Take some inputs from user and store them into json file and store that file to ipfs and get its hash back.
+        */
         super(props);
         this.state = {
             buffer: '',
